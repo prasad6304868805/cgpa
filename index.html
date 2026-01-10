@@ -68,7 +68,7 @@ button {
 
 <!-- STEP 1 -->
 <label><b>Number of Subjects:</b></label>
-<input type="number" id="numSubjects" min="1" max="7" placeholder="Enter number of subjects">
+<input type="number" id="numSubjects" min="1" max="10" placeholder="Enter number of subjects">
 <br><br>
 
 <label><b>Do you have 1-credit CLAD subject?</b></label>
@@ -163,6 +163,8 @@ function generateTable() {
             <td>
                 <select class="credit">
                     <option value="">--</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
                     <option value="3">3</option>
                     <option value="4">4</option>
                 </select>
@@ -173,7 +175,6 @@ function generateTable() {
 
     document.getElementById("subjectTable").classList.remove("hidden");
     document.getElementById("calcBtn").classList.remove("hidden");
-
     document.getElementById("cladDiv").classList.toggle("hidden", clad === "no");
 }
 
@@ -224,14 +225,13 @@ function calculateSGPA() {
         totalCredits += parseInt(credit);
     }
 
-    let clad = document.getElementById("hasClad").value;
-    if (clad === "yes") {
+    if (document.getElementById("hasClad").value === "yes") {
         let one = document.getElementById("oneCredit").value;
         if (!one) {
             alert("Select CLAD grade");
             return;
         }
-        cumulativeGP += parseInt(one);
+        cumulativeGP += parseInt(one) * 1;
         totalCredits += 1;
     }
 
