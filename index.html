@@ -20,14 +20,16 @@ body {
 table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 15px;
 }
 th, td {
     border: 1px solid #ccc;
     padding: 6px;
     text-align: center;
 }
-select {
+select, input {
     width: 100%;
+    padding: 5px;
 }
 button {
     margin-top: 15px;
@@ -53,6 +55,9 @@ button {
     background: #f7f9fa;
     border-radius: 6px;
 }
+.hidden {
+    display: none;
+}
 </style>
 </head>
 
@@ -61,7 +66,23 @@ button {
 <div class="container">
 <h2 align="center">SGPA Calculator</h2>
 
-<table>
+<!-- STEP 1 -->
+<label><b>Number of Subjects:</b></label>
+<input type="number" id="numSubjects" min="1" max="7" placeholder="Enter number of subjects">
+<br><br>
+
+<label><b>Do you have 1-credit CLAD subject?</b></label>
+<select id="hasClad">
+    <option value="">--Select--</option>
+    <option value="yes">Yes</option>
+    <option value="no">No</option>
+</select>
+
+<button onclick="generateTable()">Proceed</button>
+
+<!-- TABLE -->
+<table id="subjectTable" class="hidden">
+<thead>
 <tr>
 <th>Subject</th>
 <th>S1</th>
@@ -70,6 +91,34 @@ button {
 <th>Credit</th>
 <th>Overall Grade</th>
 </tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+
+<!-- 1 CREDIT SUBJECT -->
+<div id="cladDiv" class="hidden">
+<br>
+<label><b>1 Credit Subject (CLAD Grade)</b></label>
+<select id="oneCredit">
+    <option value="">--Select--</option>
+    <option value="10">O</option>
+    <option value="9">A+</option>
+    <option value="8">A</option>
+    <option value="7">B+</option>
+    <option value="6">B</option>
+    <option value="5">C</option>
+</select>
+</div>
+
+<button id="calcBtn" class="hidden" onclick="calculateSGPA()">Calculate SGPA</button>
+
+<div class="summary">
+    <div class="result" id="totalCredits"></div>
+    <div class="result" id="cgp"></div>
+    <div class="result" id="sgpa"></div>
+</div>
+
+</div>
 
 <script>
 const gradeOptions = `
@@ -83,55 +132,6 @@ const gradeOptions = `
 <option value="5">C</option>
 `;
 
-for (let i = 1; i <= 7; i++) {
-    document.write(`
-    <tr>
-        <td>Subject ${i}</td>
-        <td><select class="s1" onchange="calcSubject(${i})">${gradeOptions}</select></td>
-        <td><select class="s2" onchange="calcSubject(${i})">${gradeOptions}</select></td>
-        <td><select class="le" onchange="calcSubject(${i})">${gradeOptions}</select></td>
-        <td>
-            <select class="credit">
-                <option value="">--</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-            </select>
-        </td>
-        <td id="sub${i}" data-gp="">--</td>
-    </tr>
-    `);
-}
-</script>
-
-<tr>
-<td>1 Credit Subject</td>
-<td colspan="3">
-<select id="oneCredit">
-<option value="">--Select--</option>
-<option value="10">O</option>
-<option value="9">A+</option>
-<option value="8">A</option>
-<option value="7">B+</option>
-<option value="6">B</option>
-<option value="5">C</option>
-</select>
-</td>
-<td>1</td>
-<td>Overall</td>
-</tr>
-</table>
-
-<button onclick="calculateSGPA()">Calculate SGPA</button>
-
-<div class="summary">
-    <div class="result" id="totalCredits"></div>
-    <div class="result" id="cgp"></div>
-    <div class="result" id="sgpa"></div>
-</div>
-</div>
-
-<script>
-// Convert RAW GP → final grade point (TABLE LOGIC)
 function convertGP(raw) {
     if (raw > 9 && raw <= 10) return { grade: "O", gp: 10 };
     if (raw > 8 && raw <= 9)  return { grade: "A+", gp: 9 };
@@ -141,13 +141,48 @@ function convertGP(raw) {
     return { grade: "C", gp: 5 };
 }
 
-// Calculate subject
-function calcSubject(i) {
-    let row = document.querySelectorAll("table tr")[i];
+function generateTable() {
+    let n = document.getElementById("numSubjects").value;
+    let clad = document.getElementById("hasClad").value;
+
+    if (!n || !clad) {
+        alert("Please fill all details");
+        return;
+    }
+
+    let tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    for (let i = 1; i <= n; i++) {
+        tbody.innerHTML += `
+        <tr>
+            <td>Subject ${i}</td>
+            <td><select class="s1" onchange="calcSubject(this)">${gradeOptions}</select></td>
+            <td><select class="s2" onchange="calcSubject(this)">${gradeOptions}</select></td>
+            <td><select class="le" onchange="calcSubject(this)">${gradeOptions}</select></td>
+            <td>
+                <select class="credit">
+                    <option value="">--</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+            </td>
+            <td class="overall" data-gp="">--</td>
+        </tr>`;
+    }
+
+    document.getElementById("subjectTable").classList.remove("hidden");
+    document.getElementById("calcBtn").classList.remove("hidden");
+
+    document.getElementById("cladDiv").classList.toggle("hidden", clad === "no");
+}
+
+function calcSubject(el) {
+    let row = el.closest("tr");
     let s1 = row.querySelector(".s1").value;
     let s2 = row.querySelector(".s2").value;
     let le = row.querySelector(".le").value;
-    let cell = document.getElementById("sub" + i);
+    let cell = row.querySelector(".overall");
 
     if (!s1 || !s2 || !le) {
         cell.innerHTML = "--";
@@ -166,58 +201,53 @@ function calcSubject(i) {
     if (s2 !== "I") rawGP += parseInt(s2) * 0.45;
     if (le !== "I") rawGP += parseInt(le) * 0.25;
 
-    let converted = convertGP(rawGP);
-
-    cell.dataset.gp = converted.gp;      // ✅ STORE FINAL GP (10/9/8...)
-    cell.innerHTML = converted.grade;     // ✅ DISPLAY GRADE
+    let conv = convertGP(rawGP);
+    cell.dataset.gp = conv.gp;
+    cell.innerHTML = conv.grade;
 }
 
-// Final SGPA
 function calculateSGPA() {
+    let rows = document.querySelectorAll("#tableBody tr");
     let totalCredits = 0;
     let cumulativeGP = 0;
-    let rows = document.querySelectorAll("table tr");
 
-    for (let i = 1; i <= 7; i++) {
-        let cell = document.getElementById("sub" + i);
-        let gp = cell.dataset.gp;
-        let credit = rows[i].querySelector(".credit").value;
+    for (let row of rows) {
+        let gp = row.querySelector(".overall").dataset.gp;
+        let credit = row.querySelector(".credit").value;
 
         if (!gp || !credit) {
             alert("Complete all subject details");
             return;
         }
 
-        gp = parseInt(gp);
-        credit = parseInt(credit);
-
-        cumulativeGP += gp * credit;
-        totalCredits += credit;
+        cumulativeGP += parseInt(gp) * parseInt(credit);
+        totalCredits += parseInt(credit);
     }
 
-    let one = document.getElementById("oneCredit").value;
-    if (!one) {
-        alert("Select 1-credit subject grade");
-        return;
+    let clad = document.getElementById("hasClad").value;
+    if (clad === "yes") {
+        let one = document.getElementById("oneCredit").value;
+        if (!one) {
+            alert("Select CLAD grade");
+            return;
+        }
+        cumulativeGP += parseInt(one);
+        totalCredits += 1;
     }
-
-    cumulativeGP += parseInt(one) * 1;
-    totalCredits += 1;
 
     let sgpa = cumulativeGP / totalCredits;
 
     document.getElementById("totalCredits").innerHTML =
         "Total Credits = <b>" + totalCredits + "</b>";
-
     document.getElementById("cgp").innerHTML =
         "Cumulative Grade Points = <b>" + cumulativeGP + "</b>";
-
     document.getElementById("sgpa").innerHTML =
         "SGPA = <b>" + sgpa.toFixed(2) + "</b>";
 }
 </script>
+
 <footer style="text-align:center; margin-top:20px; font-weight:bold;">
-    by rnmboy: follow chey bro entertainment plus education mix kotti istam :@rnmboy_vlogs
+    by rnmboy: follow chey bro entertainment plus education mix kotti istam
 </footer>
 
 </body>
